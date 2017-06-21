@@ -42,6 +42,7 @@ struct sector_data{
 
 
 int fs_format();
+int navigate(char* directory_path);
 int fs_create(char* input_file, char* simul_file);
 int fs_read(char* output_file, char* simul_file);
 int fs_del(char* simul_file);
