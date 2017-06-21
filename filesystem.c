@@ -124,9 +124,9 @@ int fs_ls(char *dir_path){
 		for(i=0;i<14;i++) {
 			if(root_dir.entries[i].sector_start != 0) {
 				if(root_dir.entries[i].dir) {
-					printf("  d %s\n",root_dir.entries[i].name);
-				} else {
-					printf("  f %s            %u bits\n",root_dir.entries[i].name,root_dir.entries[i].size_bytes);
+					printf("d %s\n",root_dir.entries[i].name);
+					} else {
+						printf("f %s            %u bits\n",root_dir.entries[i].name,root_dir.entries[i].size_bytes);
 				}
 			}
 		}
@@ -139,9 +139,9 @@ int fs_ls(char *dir_path){
 		for(i=0;i<15;i++) {
 			if(directory.entries[i].sector_start != 0) {
 				if(directory.entries[i].dir) {
-					printf("  d %s\n",directory.entries[i].name);
-				} else {
-					printf("  f %s           %u bits\n",directory.entries[i].name, directory.entries[i].size_bytes);
+					printf("d %s\n",directory.entries[i].name); 
+					} else {
+						printf("f %s           %u bits\n",directory.entries[i].name, directory.entries[i].size_bytes);
 				}
 			}
 		}
@@ -233,18 +233,92 @@ int fs_mkdir(char* directory_path){
  * @param directory_path directory path.
  * @return 0 on success.
  */
+
 int fs_rmdir(char *directory_path){
-	int ret;
+	int ret, i=0, j=0,dirAddress,success;
+	char* nameDir = (char *) malloc(100);
+	char* pathAux;
+	char * str = (char *) malloc(100);
+	char* PathAbove;
+	struct root_table_directory root_dir;
+	struct table_directory directory, rmDir;
+	struct sector_data sector;
+	
 	if ( (ret = ds_init(FILENAME, SECTOR_SIZE, NUMBER_OF_SECTORS, 0)) != 0 ){
 		return ret;
 	}
-	
-	/* Write the code to delete a directory. */
-	
+	strcpy(str,directory_path);
+	pathAux = strtok(directory_path, "/");
+	ds_read_sector(0,(void*)&root_dir, SECTOR_SIZE);
+
+	while(pathAux != NULL) { 
+		nameDir = pathAux;
+		pathAux =  strtok(NULL, "/");
+		i++;
+	}
+
+	if(i > 1) {
+		PathAbove = (char*)malloc(100);
+		strncpy( PathAbove, str, (strlen(str) - strlen(nameDir)) -1 );
+		dirAddress = navigate(PathAbove);
+		ds_read_sector(dirAddress,(void*)&directory, SECTOR_SIZE);
+		for(i= 0;i<16;i++) {
+			if(!strcmp(directory.entries[i].name,nameDir)) {
+				ds_read_sector(directory.entries[i].sector_start,(void*)&rmDir, SECTOR_SIZE);
+				for(j= 0;j<16;j++) {
+					if(rmDir.entries[i].sector_start != 0) {
+						printf("Is not empty!\n");
+						ds_stop();
+						return -1;
+					}
+				}
+				memset(&sector, 0, SECTOR_SIZE);
+				sector.next_sector = root_dir.free_sectors_list;
+				root_dir.free_sectors_list = directory.entries[i].sector_start;
+				ds_write_sector(directory.entries[i].sector_start,(void*)&sector, SECTOR_SIZE);
+				directory.entries[i].sector_start = 0;
+				ds_write_sector(dirAddress, (void*)&directory, SECTOR_SIZE);
+				success = 1;
+				break;
+			}
+		}
+
+	} else { 
+		for(i= 0;i<15;i++) {
+			if(!strcmp(root_dir.entries[i].name,nameDir)) {
+				ds_read_sector(root_dir.entries[i].sector_start,(void*)&rmDir, SECTOR_SIZE);
+				for(j= 0;j<16;j++) {
+					if(rmDir.entries[i].sector_start != 0) {
+						printf("Is not empty!\n");
+						ds_stop();
+						return -1;
+					}
+				}
+				memset(&sector, 0, SECTOR_SIZE);
+				sector.next_sector = root_dir.free_sectors_list;
+				ds_write_sector(root_dir.entries[i].sector_start,(void*)&sector, SECTOR_SIZE);
+				root_dir.free_sectors_list = root_dir.entries[i].sector_start;
+				root_dir.entries[i].sector_start = 0;
+				success = 1;
+				break;
+			}
+		}
+	}
+
+	if(success) { 
+		printf("Directory removed!\n");
+
+	} else {
+		printf("Definition Error");
+	}
+
+	ds_write_sector(0, (void*)&root_dir, SECTOR_SIZE);
 	ds_stop();
 	
 	return 0;
+
 }
+
 
 int navigate(char* directory_path) { 
 	char* pathAux = strtok(directory_path, "/");
@@ -268,7 +342,7 @@ int navigate(char* directory_path) {
 			return sectorAddress;
 		}
 	}
-	printf("Directory not found\n");
+	printf("Directory not found!\n");
 	return 0; 
 }
 
