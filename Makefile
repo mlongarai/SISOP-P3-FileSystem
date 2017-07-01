@@ -1,4 +1,4 @@
-CFLAGS = -Wno-*
+CFLAGS = -Wall
 LIBS=
 
 SRC=$(wildcard *.c)

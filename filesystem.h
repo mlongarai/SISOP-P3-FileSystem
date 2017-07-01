@@ -50,4 +50,5 @@ int fs_ls(char *dir_path);
 int fs_mkdir(char* directory_path);
 int fs_rmdir(char *directory_path);
 int fs_free_map(char *log_f);
-
+int next_free_sector(int NextSectorCreate);
+void get_name(char* data, char* simul_file);
